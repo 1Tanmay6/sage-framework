@@ -24,7 +24,7 @@ class SearchQueryOutput(TypedDict):
     original_objective: Annotated[str, "The user's original objective"]
     search_queries: Annotated[
         List[Query],
-        "List of up to 25 optimized search queries that together can answer the question"
+        "List of up to 10 optimized search queries that together can answer the question"
     ]
     difficulty: Annotated[str, "How difficult or complex is the original query"]
 
@@ -47,7 +47,7 @@ def generate_queries(question: str, objective: str):
     prompt = f"""
         You are an expert at generating search queries.
 
-        Given a question, generate up to 25 HIGH-QUALITY search queries such that:
+        Given a question, generate up to 10 HIGH-QUALITY search queries such that:
         - If someone searches them, they can fully answer the question, AND fulfill their objective.
         - Cover multiple angles (definition, examples, comparisons, implementation)
         - Be specific, not vague
@@ -59,6 +59,7 @@ def generate_queries(question: str, objective: str):
 
         Question: {question}
         Objective: {objective}
+        STRICT JSON ONLY. IN THE GIVEN FORMAT ONLY
         """
 
     return structured_llm.invoke(prompt)

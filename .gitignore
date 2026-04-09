@@ -9,3 +9,7 @@ wheels/
 # Virtual environments
 .venv
 data
+scraped_data_old
+scraped_data
+scraped_data.zip
+*.ipynb
