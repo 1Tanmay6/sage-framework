@@ -11,5 +11,6 @@ wheels/
 data
 scraped_data_old
 scraped_data
-scraped_data.zip
+*.zip
 *.ipynb
+cleaned_data/
