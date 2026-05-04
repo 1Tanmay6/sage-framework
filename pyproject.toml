@@ -16,10 +16,13 @@ dependencies = [
     "tiktoken>=0.12.0",
     "torch>=2.11.0",
     "transformers>=5.5.0",
+    "unsloth>=2025.9.5",
+    "unsloth-zoo>=2025.9.12",
     "unstructured>=0.22.18",
 ]
 
 [dependency-groups]
 dev = [
+    "iprogress>=0.4",
     "ipykernel>=7.2.0",
 ]

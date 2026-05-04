@@ -14,3 +14,4 @@ scraped_data
 *.zip
 *.ipynb
 cleaned_data/
+notebooks
