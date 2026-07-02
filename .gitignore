@@ -15,3 +15,5 @@ scraped_data
 *.ipynb
 cleaned_data/
 notebooks
+*.json
+*.jsonl
