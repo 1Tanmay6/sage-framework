@@ -1,0 +1,14 @@
+paths:
+  data_dir: "data"
+  folder_path: "custom/silver/cleaned_data_VDB"
+  output_chunks_folder: "custom/silver/cleaned_data_chunks"
+  collection_name_template: "cleaned_silver"
+  collection_name_suffix: "_vdb"
+  vdb_path: "custom/silver/vdb"
+  output_splits_folder: "custom/silver/splits"
+  final_silver_dataset: "custom/silver/dataset"
+embedding_model: "snowflake-arctic-embed2"
+qdrant:
+  local:
+    host: "localhost"
+    port: 6333
