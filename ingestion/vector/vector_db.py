@@ -1,9 +1,0 @@
-import os
-from tqdm import tqdm
-from langchain_community.document_loaders import DirectoryLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OllamaEmbeddings
-from qdrant_client import QdrantClient
-from langchain_qdrant import QdrantVectorStore
-import random
-import math

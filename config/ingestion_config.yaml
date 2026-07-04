@@ -12,3 +12,4 @@ qdrant:
   local:
     host: "localhost"
     port: 6333
+    docker_container_name: "sage_silver_vdb"
