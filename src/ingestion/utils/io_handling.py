@@ -9,6 +9,12 @@ from ...globals import setup_logger, log_time
 logger = setup_logger(__name__)
 
 
+def store_chunks(chunks):
+    # Implement your logic to store chunks here
+    for chunk in chunks:
+        path = chunk.metadata
+
+
 def save_chunks_to_jsonl(
         chunks: list,
         output_folder: str

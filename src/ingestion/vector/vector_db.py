@@ -90,6 +90,11 @@ class VectorDB:
             # Catches ReadError (Connection reset), ConnectError, TimeoutException, etc.
             # This safely flags that the service is still initializing
             return False
+        except Exception as e:
+            self.logger.error(f"Unexpected error occurred: {e}")
+            self.logger.warning(
+                "Check if you have docker daemon up and running")
+            return False
 
     def ensure_qdrant(self, timeout: float = 15):
         """Starts the Qdrant container if it's not running. 
