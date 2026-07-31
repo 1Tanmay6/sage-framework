@@ -2,9 +2,14 @@ import sys
 import time
 import docker
 import httpx
-from ..utils import load_config
+from tqdm import tqdm
+from ..core import load_config
 from ...globals import setup_logger
 from typing import Literal
+from langchain_ollama import OllamaEmbeddings
+from qdrant_client.models import Distance, VectorParams
+from qdrant_client import QdrantClient
+from langchain_qdrant import QdrantVectorStore
 
 
 class VectorDB:
@@ -17,6 +22,9 @@ class VectorDB:
         self._logger = setup_logger(__name__)
         self._qdrant_url: str
         self._container_name: str
+        self._client: any = None
+        self._embeddings: any = OllamaEmbeddings(
+            model=self._config['embedding_model'])
 
         if runtime_env == 'local':
             self._container_name = self._config['qdrant'][runtime_env]['docker_container_name']
@@ -28,10 +36,6 @@ class VectorDB:
                 port=self._qdrant_port,
                 runtime_env=runtime_env
             )
-
-            # Verify the container exists right away during initialization
-            self._verify_container_exists()
-
         else:
             raise NotImplementedError(
                 "The current system supports only 1 runtime environment: local.")
@@ -96,7 +100,7 @@ class VectorDB:
                 "Check if you have docker daemon up and running")
             return False
 
-    def ensure_qdrant(self, timeout: float = 15):
+    def _ensure_qdrant(self, timeout: float = 15):
         """Starts the Qdrant container if it's not running. 
 
         Kills the script with exit code 1 if it fails to start.
@@ -135,6 +139,124 @@ class VectorDB:
             self._logger.critical(
                 f"Docker API error occurred while starting container: {e}")
             sys.exit(1)
+
+    def _create_client(self) -> tuple:
+        """Create a new Qdrant client."""
+        self._verify_container_exists()
+        self._ensure_qdrant()
+        try:
+            self._client = QdrantClient(url=self._qdrant_url)
+            return self._client, True
+        except Exception as e:
+            self._logger.error(f"Failed to create Qdrant vector store: {e}")
+            return None, False
+
+    def get_client(self):
+        """Get an active client for intercting with the vector"""
+        if self._client is None:
+            self._logger.info(f"No active client found attempting connection")
+            client, flag = self._create_client()
+            if flag:
+                self._logger.info(f"Client Created. Connection Established")
+                return client
+            else:
+                self._logger.error(
+                    f"Failed to create client. Connection not established")
+                return None
+        else:
+            self._logger.info("Active client found")
+            return self._client
+
+    def list_collection(self) -> list[str]:
+        """List all collection names in the Qdrant instance.
+
+        Returns a list of collection name strings, or an empty list
+        if no connection can be established or an error occurs.
+        """
+        if self._client is None:
+            self._logger.warning(
+                "No active Qdrant client. Attempting to establish connection before listing collections.")
+            client = self.get_client()
+            if client is None:
+                self._logger.error(
+                    "Cannot list collections: no client connection.")
+                return []
+
+        try:
+            response = self._client.get_collections()
+            names = [c.name for c in response.collections]
+            self._logger.info(
+                f"Found {len(names)} collection(s): {names}")
+            return names
+        except Exception as e:
+            self._logger.error(
+                f"Failed to list collections: {e}")
+            return []
+
+    def create_collection(self, collection_name: str) -> bool:
+        """Create a new collection in the vector store."""
+        try:
+            self._logger.info(
+                f"Creating collection '{collection_name}' in Qdrant.")
+            vector_size = len(self._embeddings.embed_query("test"))
+
+            self._client.create_collection(
+                collection_name=collection_name,
+                vectors_config=VectorParams(
+                    size=vector_size,
+                    distance=Distance.COSINE,
+                ),
+            )
+            self._logger.info(
+                f"Collection '{collection_name}' created successfully.")
+            return True
+        except Exception as e:
+            self._logger.error(
+                f"Failed to create collection '{collection_name}': {e}")
+            return False
+
+    def delete_collection(self, collection_name: str) -> bool:
+        """Delete a collection from the vector store.
+
+        Returns True if the collection was deleted (or did not exist),
+        False if an error occurred during deletion.
+        """
+        if self._client is None:
+            self._logger.warning(
+                "No active Qdrant client. Attempting to establish connection before deletion.")
+            client = self.get_client()
+            if client is None:
+                self._logger.error(
+                    f"Cannot delete collection '{collection_name}': no client connection.")
+                return False
+
+        try:
+            if not self._client.collection_exists(collection_name=collection_name):
+                self._logger.warning(
+                    f"Collection '{collection_name}' does not exist. Nothing to delete.")
+                return True
+
+            self._client.delete_collection(collection_name=collection_name)
+            self._logger.info(
+                f"Collection '{collection_name}' deleted successfully.")
+            return True
+        except Exception as e:
+            self._logger.error(
+                f"Failed to delete collection '{collection_name}': {e}")
+            return False
+
+    def add_documents(self, chunks: list, batch_size: int, vdb_client: any) -> bool:
+        try:
+            self._logger.info("Adding documents to Qdrant")
+            if len(chunks) > batch_size:
+                for i in tqdm(range(0, len(chunks), batch_size), desc="Embedding & Ingesting"):
+                    batch = chunks[i: i + batch_size]
+                    vdb_client.add_documents(batch)
+            self._logger.info("Ingestion Completed for this batch")
+            return True
+        except Exception as e:
+            self._logger.error(f"Error during ingestion: {e}")
+            return False
 
 
 if __name__ == '__main__':
